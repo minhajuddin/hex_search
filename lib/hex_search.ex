@@ -7,13 +7,10 @@ defmodule HexSearch do
     config = :hex_core.default_config()
     options = [sort: :downloads]
 
-    ansi_opts = IEx.Config.ansi_docs()
-
     case :hex_api_package.search(config, search_term, options) do
       {:ok, {200, _, packages}} ->
-        Enum.each(packages, fn p ->
-          p |> render |> print(ansi_opts)
-        end)
+        packages
+        |> Enum.each(&print/1)
 
       err ->
         Logger.error("ERROR: #{inspect(err)}")
@@ -29,35 +26,19 @@ defmodule HexSearch do
     """)
   end
 
-  def render(package) do
-    %{
-      heading:
-        "name: #{package["name"]} downloads: #{package["downloads"]["all"]} licenses: #{
-          Enum.join(package["meta"]["licenses"], ", ")
-        }",
-      body: """
-      dep: {:#{package["name"]}, "~> #{hd(package["releases"])["version"]}"}
+  def print(package) do
+    IO.puts("""
+    >> dep: {:#{package["name"]}, "~> #{hd(package["releases"])["version"]}"}
 
-      links: #{package["meta"]["links"] |> Enum.map(fn {text, href} -> "[#{text}](#{href})" end) |> Enum.join(", ")}
-
-      maintaners: #{Enum.join(package["meta"]["maintainers"], ", ")}
-
-      last update: #{package["updated_at"]}
-
-      #{package["meta"]["description"]}
-
-      """
-
+    maintaners: #{Enum.join(package["meta"]["maintainers"], ", ")}
+    links: #{
+    package["meta"]["links"]
+    |> Enum.map(fn {text, href} -> "[#{text}](#{href})" end)
+    |> Enum.join(", ")
     }
-  end
+    """)
 
-  def print(package, nil) do
-    IO.puts(["# ", package.heading, ?\n])
-    IO.puts(package.body)
-  end
-
-  def print(package, opts) do
-    IO.ANSI.Docs.print_heading(package.heading, opts)
-    IO.ANSI.Docs.print(package.body, opts)
+    IO.puts(package["meta"]["description"])
+    IO.puts("---\n")
   end
 end
